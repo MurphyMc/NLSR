@@ -474,18 +474,22 @@ Nlsr::processFaceDataset(const std::vector<ndn::nfd::FaceStatus>& faces)
 
   // Iterate over each neighbor listed in nlsr.conf
   for (auto& adjacent : m_adjacencyList.getAdjList()) {
+    if (adjacent.getFaceId() != 0) continue;
 
     const std::string faceUriString = adjacent.getFaceUri().toString();
+    const bool isDev = adjacent.getFaceUri().getScheme().compare("dev") == 0;
     // Check the list of FaceStatus objects we got for a match
     for (const ndn::nfd::FaceStatus& faceStatus : faces) {
       // Set the adjacency FaceID if we find a URI match and it was
       // previously unset. Change the boolean to true.
-      if (adjacent.getFaceId() == 0 && faceUriString == faceStatus.getRemoteUri()) {
+      if ( (faceUriString == faceStatus.getRemoteUri()) ||
+           (isDev && faceUriString == faceStatus.getLocalUri()) ) {
         NLSR_LOG_DEBUG("FaceUri: " << faceStatus.getRemoteUri() <<
                    " FaceId: "<< faceStatus.getFaceId());
         adjacent.setFaceId(faceStatus.getFaceId());
         // Register the prefixes for each neighbor
         this->registerAdjacencyPrefixes(adjacent, ndn::time::milliseconds::max());
+        break;
       }
     }
     // If this adjacency has no information in this dataset, then one
